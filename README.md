@@ -21,20 +21,9 @@ If several branches need to enter data into one live, shared database, see [Addi
 
 ## Sign-in
 
-The app opens on a sign-in screen.
+The app opens on a sign-in screen. With the cloud connected (the normal setup), every person signs in with their own account created in Supabase → Authentication → Users; accounts listed in the `app_admins` table are admins. Ask the administrator for a login — passwords are never written in this repository.
 
-- **Username:** `Vtc2026`
-- **Password:** `Vtc@2026@123`
-
-Only a SHA-256 hash of the credentials is in the code (`src/auth.js`), never the password itself. Five wrong attempts pause sign-in for 30 seconds. "Keep me signed in" lasts 7 days on that device; otherwise the session ends when the tab closes. Use **Sign out** in the top bar on shared computers.
-
-This is a front-door lock for a static site, not server security: someone with technical skill and access to the computer could still read the browser's stored data. For real per-user accounts, add a backend such as Supabase Auth (see below).
-
-To change the credentials, compute the new hash and replace `CRED_HASH` in `src/auth.js`:
-
-```bash
-node -e "console.log(require('crypto').createHash('sha256').update('NEWUSER\nNEWPASSWORD').digest('hex'))"
-```
+Five wrong attempts pause sign-in for 30 seconds. "Keep me signed in" lasts 7 days on that device; otherwise the session ends when the tab closes. Use **Sign out** on shared computers — it also removes the company's data from that browser.
 
 ## Features
 
