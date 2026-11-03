@@ -29,16 +29,14 @@ begin
   end;
   fy := case when extract(month from d) >= 4 then extract(year from d)::int else extract(year from d)::int - 1 end;
   pre := 'VT' || right(fy::text, 2) || '-' || case when new.data->>'type' = 'dispatch' then 'T' else 'I' end || '-';
-  perform pg_advisory_xact_lock(hashtext('pgim-challan:' || coalesce(new.data->>'branchId', '') || ':' || pre));
+  perform pg_advisory_xact_lock(hashtext('pgim-challan:' || pre));
   if want like pre || '%' and substr(want, length(pre) + 1) ~ '^\d+$'
-     and not exists (select 1 from public.transactions
-                      where data->>'branchId' = new.data->>'branchId' and data->>'challanNo' = want) then
+     and not exists (select 1 from public.transactions where data->>'challanNo' = want) then
     return new; -- the number the app showed is still free
   end if;
   select coalesce(max(substr(data->>'challanNo', length(pre) + 1)::int), 0) into mx
     from public.transactions
-   where data->>'branchId' = new.data->>'branchId'
-     and data->>'challanNo' like pre || '%'
+   where data->>'challanNo' like pre || '%'
      and substr(data->>'challanNo', length(pre) + 1) ~ '^\d+$';
   new.data := new.data || jsonb_build_object('challanNo', pre || case when mx + 1 < 1000 then lpad((mx + 1)::text, 3, '0') else (mx + 1)::text end);
   return new;
@@ -48,6 +46,7 @@ drop trigger if exists sf_challan on public.transactions;
 create trigger sf_challan before insert on public.transactions
   for each row execute function public.sf_challan();
 
-create unique index if not exists transactions_challan_unique
-  on public.transactions ((data->>'branchId'), (data->>'challanNo'))
+drop index if exists public.transactions_challan_unique;
+create unique index if not exists transactions_challan_no_unique
+  on public.transactions ((data->>'challanNo'))
   where data->>'challanNo' is not null;
