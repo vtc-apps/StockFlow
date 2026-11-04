@@ -3,10 +3,10 @@
 --
 --  Every entry gets a challan number, assigned here so two devices can
 --  never issue the same one:
---    Stock Inward / opening : VT26-I-001, VT26-I-002 …
---    Stock Transfer         : VT26-T-001, VT26-T-002 …
+--    Stock Inward / opening : VTC26-I-00001, VTC26-I-00002 …
+--    Stock Transfer         : VTC26-T-00001, VTC26-T-00002 …
 --  One company-wide series each (all branches), per financial year
---  (April–March; VT26 = 2026-27). Products saved together in one entry
+--  (April–March; VTC26 = 2026-27). Products saved together in one entry
 --  (same challanGroup) share one number; separate entries never share one.
 --  The app shows the expected number; if another device took it first,
 --  the next free number is used instead.
@@ -32,7 +32,7 @@ begin
     return new; -- the entry rules reject a bad date
   end;
   fy := case when extract(month from d) >= 4 then extract(year from d)::int else extract(year from d)::int - 1 end;
-  pre := 'VT' || right(fy::text, 2) || '-' || case when new.data->>'type' = 'dispatch' then 'T' else 'I' end || '-';
+  pre := 'VTC' || right(fy::text, 2) || '-' || case when new.data->>'type' = 'dispatch' then 'T' else 'I' end || '-';
   perform pg_advisory_xact_lock(hashtext('pgim-challan:' || pre));
   -- another product of the same entry is already saved: use its number
   if grp is not null then
@@ -52,7 +52,7 @@ begin
     from public.transactions
    where data->>'challanNo' like pre || '%'
      and substr(data->>'challanNo', length(pre) + 1) ~ '^\d+$';
-  new.data := new.data || jsonb_build_object('challanNo', pre || case when mx + 1 < 1000 then lpad((mx + 1)::text, 3, '0') else (mx + 1)::text end);
+  new.data := new.data || jsonb_build_object('challanNo', pre || case when mx + 1 < 100000 then lpad((mx + 1)::text, 5, '0') else (mx + 1)::text end);
   return new;
 end $$;
 
