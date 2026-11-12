@@ -1,8 +1,8 @@
 -- ═══════════════════════════════════════════════════════════════════════
---  VTC PGIM · Stock Distribution challan series (VTC26-D-00001). Safe to run again.
+--  VTC PGIM · Stock Distribution challan series (DIS-00001, one running series). Safe to run again.
 --    VTC26-I-…  stock inward / opening
 --    VTC26-T-…  stock transfer to a branch
---    VTC26-D-…  stock distribution (shop, salesman, customer, person)
+--    DIS-…      stock distribution (retailer, DSE, person)
 -- ═══════════════════════════════════════════════════════════════════════
 create or replace function public.sf_challan() returns trigger
 language plpgsql as $$
@@ -24,7 +24,10 @@ begin
     return new; -- the entry rules reject a bad date
   end;
   fy := case when extract(month from d) >= 4 then extract(year from d)::int else extract(year from d)::int - 1 end;
-  pre := 'VTC' || right(fy::text, 2) || '-' || case when new.data->>'type' <> 'dispatch' then 'I' when coalesce(new.data->>'dispatchType', '') = 'branch_transfer' then 'T' else 'D' end || '-';
+  pre := case
+           when new.data->>'type' = 'dispatch' and coalesce(new.data->>'dispatchType', '') <> 'branch_transfer' then 'DIS-'
+           else 'VTC' || right(fy::text, 2) || '-' || case when new.data->>'type' = 'dispatch' then 'T' else 'I' end || '-'
+         end;
   perform pg_advisory_xact_lock(hashtext('pgim-challan:' || pre));
   -- another product of the same entry is already saved: use its number
   if grp is not null then
